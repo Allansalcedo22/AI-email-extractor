@@ -1,0 +1,423 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Action Item Extractor</title>
+<meta name="description" content="Paste an email or message thread and get action items, deadlines, questions to answer, and a draft reply.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%234f46e5'/><path d='M9 16.5l4.5 4.5L23 11.5' stroke='white' stroke-width='3' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>">
+<style>
+  :root {
+    --bg: #f6f7f9;
+    --surface: #ffffff;
+    --surface-2: #f1f3f6;
+    --border: #e2e5ea;
+    --text: #15181d;
+    --text-2: #5b6370;
+    --text-3: #8a919c;
+    --accent: #4f46e5;
+    --accent-hover: #4338ca;
+    --accent-soft: #eef0ff;
+    --on-accent: #ffffff;
+    --high: #c2261d;  --high-bg: #fdecea;
+    --med: #a35c00;   --med-bg: #fff4e0;
+    --low: #1d7a45;   --low-bg: #e6f6ec;
+    --ph-bg: #fff3c4; --ph-text: #6b4e00;
+    --danger-bg: #fdecea; --danger: #b42318;
+    --shadow: 0 1px 2px rgb(16 24 40 / .05), 0 1px 3px rgb(16 24 40 / .06);
+    --radius: 12px;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0f1115;
+      --surface: #171a20;
+      --surface-2: #1f232b;
+      --border: #2b303a;
+      --text: #e8eaee;
+      --text-2: #a3aab6;
+      --text-3: #6f7784;
+      --accent: #818cf8;
+      --accent-hover: #a5b4fc;
+      --accent-soft: #23264a;
+      --on-accent: #0f1115;
+      --high: #ff8a80;  --high-bg: #3a1a18;
+      --med: #ffc163;   --med-bg: #362a14;
+      --low: #6fd99a;   --low-bg: #15301f;
+      --ph-bg: #3d3412; --ph-text: #ffe08a;
+      --danger-bg: #3a1a18; --danger: #ff8a80;
+      --shadow: none;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0f1115; --surface: #171a20; --surface-2: #1f232b; --border: #2b303a;
+    --text: #e8eaee; --text-2: #a3aab6; --text-3: #6f7784;
+    --accent: #818cf8; --accent-hover: #a5b4fc; --accent-soft: #23264a; --on-accent: #0f1115;
+    --high: #ff8a80; --high-bg: #3a1a18; --med: #ffc163; --med-bg: #362a14; --low: #6fd99a; --low-bg: #15301f;
+    --ph-bg: #3d3412; --ph-text: #ffe08a; --danger-bg: #3a1a18; --danger: #ff8a80; --shadow: none;
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  button, select, textarea { font: inherit; color: inherit; }
+
+  header {
+    max-width: 1200px; margin: 0 auto; padding: 20px 16px 8px;
+    display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+  }
+  .brand { display: flex; align-items: center; gap: 10px; }
+  .brand h1 { font-size: 18px; margin: 0; letter-spacing: -.01em; }
+  .brand p { margin: 0; color: var(--text-2); font-size: 13px; }
+  .logo { width: 32px; height: 32px; border-radius: 8px; background: var(--accent); display: grid; place-items: center; flex: none; }
+  .status { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-2);
+    background: var(--surface); border: 1px solid var(--border); padding: 4px 10px; border-radius: 999px; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--text-3); }
+  .dot.ok { background: var(--low); } .dot.bad { background: var(--high); }
+
+  main {
+    max-width: 1200px; margin: 0 auto; padding: 8px 16px 40px;
+    display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; align-items: start;
+  }
+  @media (max-width: 860px) { main { grid-template-columns: minmax(0, 1fr); } }
+
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); }
+  .input-card { padding: 16px; display: flex; flex-direction: column; gap: 12px; position: sticky; top: 16px; }
+  @media (max-width: 860px) { .input-card { position: static; } }
+
+  .row { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+  .label { font-size: 12px; font-weight: 600; color: var(--text-2); text-transform: uppercase; letter-spacing: .04em; }
+
+  .chips { display: flex; gap: 6px; flex-wrap: wrap; }
+  .chip { border: 1px solid var(--border); background: var(--surface-2); border-radius: 999px; padding: 4px 10px; font-size: 13px; cursor: pointer; }
+  .chip:hover { border-color: var(--accent); color: var(--accent); }
+
+  textarea {
+    width: 100%; min-height: 320px; resize: vertical; padding: 12px; border-radius: 10px;
+    border: 1px solid var(--border); background: var(--surface-2); line-height: 1.5; font-size: 14px;
+  }
+  textarea:focus, button:focus-visible, .seg input:focus-visible + span {
+    outline: 2px solid var(--accent); outline-offset: 2px;
+  }
+  .count { font-size: 12px; color: var(--text-3); font-variant-numeric: tabular-nums; }
+  .count.over { color: var(--danger); font-weight: 600; }
+
+  .seg { display: inline-flex; background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px; padding: 3px; }
+  .seg label { position: relative; }
+  .seg input { position: absolute; opacity: 0; pointer-events: none; }
+  .seg span { display: block; padding: 6px 12px; border-radius: 7px; font-size: 14px; cursor: pointer; color: var(--text-2); }
+  .seg input:checked + span { background: var(--surface); color: var(--text); box-shadow: var(--shadow); font-weight: 600; }
+
+  .btn {
+    border: 0; border-radius: 10px; padding: 11px 16px; font-weight: 600; cursor: pointer;
+    background: var(--accent); color: var(--on-accent); display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  }
+  .btn:hover:not(:disabled) { background: var(--accent-hover); }
+  .btn:disabled { opacity: .55; cursor: not-allowed; }
+  .btn.ghost { background: transparent; color: var(--text-2); border: 1px solid var(--border); padding: 6px 10px; font-weight: 500; font-size: 13px; }
+  .btn.ghost:hover:not(:disabled) { background: var(--surface-2); color: var(--text); }
+  .hint { font-size: 12px; color: var(--text-3); text-align: center; }
+  kbd { font: 11px ui-monospace, SFMono-Regular, Menlo, monospace; border: 1px solid var(--border); border-bottom-width: 2px; border-radius: 4px; padding: 0 4px; }
+
+  .spinner { width: 16px; height: 16px; border-radius: 50%; border: 2px solid currentColor; border-right-color: transparent; animation: spin .7s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .results { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+  .empty { padding: 48px 24px; text-align: center; color: var(--text-2); }
+  .empty h2 { font-size: 16px; color: var(--text); margin: 12px 0 4px; }
+  .empty p { margin: 0 auto; max-width: 36ch; font-size: 14px; }
+  .error { padding: 14px 16px; background: var(--danger-bg); color: var(--danger); border-color: transparent; font-size: 14px; }
+  .error strong { display: block; margin-bottom: 2px; }
+
+  .section { padding: 16px; }
+  .section h2 { font-size: 13px; margin: 0 0 12px; color: var(--text-2); text-transform: uppercase; letter-spacing: .04em; display: flex; align-items: center; gap: 8px; }
+  .section h2 .n { background: var(--surface-2); color: var(--text-2); border-radius: 999px; padding: 0 8px; font-size: 12px; letter-spacing: 0; }
+
+  .summary { display: flex; gap: 12px; align-items: flex-start; }
+  .badge { flex: none; font-size: 12px; font-weight: 700; letter-spacing: .05em; padding: 4px 10px; border-radius: 6px; }
+  .badge.HIGH { background: var(--high-bg); color: var(--high); }
+  .badge.MEDIUM { background: var(--med-bg); color: var(--med); }
+  .badge.LOW { background: var(--low-bg); color: var(--low); }
+  .summary p { margin: 0; }
+  .meta { margin-top: 6px; display: flex; gap: 8px; flex-wrap: wrap; font-size: 12px; color: var(--text-3); }
+
+  .todo { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+  .todo li { display: flex; gap: 10px; padding: 10px 0; border-top: 1px solid var(--border); }
+  .todo li:first-child { border-top: 0; padding-top: 0; }
+  .todo input { width: 18px; height: 18px; margin: 2px 0 0; accent-color: var(--accent); flex: none; cursor: pointer; }
+  .todo .task { margin: 0; overflow-wrap: anywhere; }
+  .todo li.done .task { text-decoration: line-through; color: var(--text-3); }
+  .tags { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+  .tag { font-size: 12px; padding: 1px 8px; border-radius: 999px; background: var(--surface-2); color: var(--text-2); border: 1px solid var(--border); }
+  .tag.you { background: var(--accent-soft); color: var(--accent); border-color: transparent; font-weight: 600; }
+  .tag.due { background: var(--med-bg); color: var(--med); border-color: transparent; }
+
+  .questions { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 8px; }
+  .none { color: var(--text-3); font-size: 14px; margin: 0; }
+
+  .reply {
+    white-space: pre-wrap; overflow-wrap: anywhere; background: var(--surface-2); border: 1px solid var(--border);
+    border-radius: 10px; padding: 14px; margin: 0; font: inherit; font-size: 14px; line-height: 1.6;
+  }
+  .ph { background: var(--ph-bg); color: var(--ph-text); border-radius: 4px; padding: 0 3px; }
+  .reply-note { font-size: 12px; color: var(--text-3); margin: 8px 0 0; }
+  .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">
+    <div class="logo" aria-hidden="true">
+      <svg width="18" height="18" viewBox="0 0 32 32"><path d="M8 16.5l5 5L24 10.5" stroke="white" stroke-width="3.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </div>
+    <div>
+      <h1>Action Item Extractor</h1>
+      <p>Paste an email or thread. Get tasks, deadlines, questions, and a draft reply.</p>
+    </div>
+  </div>
+  <span class="status" id="status"><span class="dot" id="statusDot"></span><span id="statusText">Checking backend…</span></span>
+</header>
+
+<main>
+  <form class="card input-card" id="form">
+    <div class="row">
+      <label class="label" for="text">Message</label>
+      <div class="chips" id="samples" aria-label="Load a sample"></div>
+    </div>
+    <textarea id="text" placeholder="Paste an email, Slack thread, or long message here…" spellcheck="false"></textarea>
+    <div class="row">
+      <fieldset class="seg" style="margin:0" aria-label="Reply tone">
+        <legend class="sr-only">Reply tone</legend>
+        <label><input type="radio" name="tone" value="Professional" checked><span>Professional</span></label>
+        <label><input type="radio" name="tone" value="Casual"><span>Casual</span></label>
+        <label><input type="radio" name="tone" value="Direct"><span>Direct</span></label>
+      </fieldset>
+      <span class="count" id="count">0 / 30,000</span>
+    </div>
+    <button class="btn" id="submit" type="submit">Extract Action Items</button>
+    <div class="hint"><kbd id="mod">Ctrl</kbd> + <kbd>Enter</kbd> to extract</div>
+  </form>
+
+  <section class="results" id="results" aria-live="polite">
+    <div class="card empty">
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9l2 2 3-3M7 15h10M13 10h4"/></svg>
+      <h2>Results show up here</h2>
+      <p>Paste a message, or load a sample above, then click Extract.</p>
+    </div>
+  </section>
+</main>
+
+<script>
+const MAX = 30000;
+const $ = (id) => document.getElementById(id);
+const form = $("form"), textEl = $("text"), countEl = $("count"), submitBtn = $("submit"), results = $("results");
+
+if (/Mac|iPhone|iPad/.test(navigator.platform)) $("mod").textContent = "⌘";
+
+/** Tiny DOM helper: el("div", {class: "x"}, child, "text", ...) — text is always set via textContent. */
+function el(tag, attrs = {}, ...children) {
+  const node = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (v === false || v == null) continue;
+    if (k === "class") node.className = v;
+    else if (k.startsWith("on")) node.addEventListener(k.slice(2), v);
+    else node.setAttribute(k, v === true ? "" : v);
+  }
+  for (const c of children.flat()) if (c != null) node.append(c instanceof Node ? c : document.createTextNode(String(c)));
+  return node;
+}
+
+function updateCount() {
+  const n = textEl.value.length;
+  countEl.textContent = `${n.toLocaleString()} / ${MAX.toLocaleString()}`;
+  countEl.classList.toggle("over", n > MAX);
+  submitBtn.disabled = busy || !textEl.value.trim() || n > MAX;
+}
+
+// ---- backend status -------------------------------------------------------
+async function checkHealth() {
+  try {
+    const r = await fetch("/api/health");
+    const h = await r.json();
+    if (h.status === "ok") {
+      $("statusDot").className = "dot ok";
+      $("statusText").textContent = `${h.provider} · ${h.model}`;
+    } else {
+      $("statusDot").className = "dot bad";
+      $("statusText").textContent = "Backend misconfigured";
+      $("status").title = h.detail || "";
+    }
+  } catch {
+    $("statusDot").className = "dot bad";
+    $("statusText").textContent = "Backend unreachable";
+  }
+}
+
+// ---- samples --------------------------------------------------------------
+const SAMPLE_LABELS = { group_email: "Group email", one_on_one: "1-on-1 message" };
+async function loadSamples() {
+  try {
+    const samples = await (await fetch("/api/samples")).json();
+    for (const [key, text] of Object.entries(samples)) {
+      $("samples").append(el("button", {
+        type: "button", class: "chip",
+        onclick: () => { textEl.value = text; updateCount(); textEl.focus(); textEl.setSelectionRange(0, 0); textEl.scrollTop = 0; },
+      }, SAMPLE_LABELS[key] || key.replace(/_/g, " ")));
+    }
+  } catch { /* samples are optional */ }
+}
+
+/** Clipboard API first; fall back to execCommand where it's blocked (iframes, http). */
+async function copyText(text) {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch {
+    const ta = el("textarea", { readonly: true, style: "position:fixed;top:0;left:0;opacity:0" });
+    ta.value = text;
+    document.body.append(ta);
+    ta.select();
+    let ok = false;
+    try { ok = document.execCommand("copy"); } catch { /* ignore */ }
+    ta.remove();
+    return ok;
+  }
+}
+
+// ---- rendering ------------------------------------------------------------
+/** Split text into plain strings and highlighted [placeholder] spans. */
+function withPlaceholders(text) {
+  return text.split(/(\[[^\]\n]+\])/g).filter(Boolean)
+    .map((part) => /^\[[^\]]+\]$/.test(part) ? el("mark", { class: "ph" }, part) : part);
+}
+
+function renderLoading() {
+  results.replaceChildren(el("div", { class: "card empty" },
+    el("div", { class: "spinner", style: "margin:0 auto;color:var(--accent);width:28px;height:28px" }),
+    el("h2", {}, "Reading the message…"),
+    el("p", {}, "This usually takes a few seconds."),
+  ));
+}
+
+function renderError(title, detail) {
+  results.replaceChildren(el("div", { class: "card error", role: "alert" }, el("strong", {}, title), detail));
+}
+
+function renderResult(r, ms) {
+  const isYou = (o) => o.trim().toLowerCase() === "you";
+  const noDeadline = (d) => /^no hard deadline$/i.test(d.trim());
+
+  const summary = el("div", { class: "card section" },
+    el("div", { class: "summary" },
+      el("span", { class: `badge ${r.priority}` }, r.priority),
+      el("div", {},
+        el("p", {}, r.priority_reason),
+        el("div", { class: "meta" },
+          el("span", {}, r.is_group_thread ? "Group thread" : "1-on-1 message"),
+          el("span", {}, "·"),
+          el("span", {}, `${(ms / 1000).toFixed(1)}s`),
+        ),
+      ),
+    ),
+  );
+
+  const todos = r.action_items.length
+    ? el("ul", { class: "todo" }, r.action_items.map((item) => {
+        const li = el("li", {});
+        const cb = el("input", { type: "checkbox", "aria-label": `Mark done: ${item.task}`,
+          onchange: (e) => li.classList.toggle("done", e.target.checked) });
+        li.append(cb, el("div", {},
+          el("p", { class: "task" }, item.task),
+          el("div", { class: "tags" },
+            el("span", { class: `tag${isYou(item.owner) ? " you" : ""}` }, `👤 ${item.owner}`),
+            el("span", { class: `tag${noDeadline(item.deadline) ? "" : " due"}` }, `⏰ ${item.deadline}`),
+          ),
+        ));
+        return li;
+      }))
+    : el("p", { class: "none" }, "No action items found.");
+
+  const questions = r.questions_to_answer.length
+    ? el("ol", { class: "questions" }, r.questions_to_answer.map((q) => el("li", {}, q)))
+    : el("p", { class: "none" }, "Nothing you need to answer.");
+
+  const copyBtn = el("button", { type: "button", class: "btn ghost", style: "margin-left:auto" }, "Copy Reply");
+  copyBtn.addEventListener("click", async () => {
+    copyBtn.textContent = (await copyText(r.draft_reply)) ? "Copied ✓" : "Copy failed";
+    setTimeout(() => (copyBtn.textContent = "Copy Reply"), 1600);
+  });
+  const hasPh = /\[[^\]]+\]/.test(r.draft_reply);
+
+  results.replaceChildren(
+    summary,
+    el("div", { class: "card section" },
+      el("h2", {}, "Action items", el("span", { class: "n" }, r.action_items.length)), todos),
+    el("div", { class: "card section" },
+      el("h2", {}, "Questions to answer", el("span", { class: "n" }, r.questions_to_answer.length)), questions),
+    el("div", { class: "card section" },
+      el("h2", {}, "Draft reply", copyBtn),
+      el("pre", { class: "reply" }, withPlaceholders(r.draft_reply)),
+      hasPh ? el("p", { class: "reply-note" }, "Fill in the highlighted [placeholders] before sending.") : null,
+    ),
+  );
+}
+
+// ---- submit ---------------------------------------------------------------
+let busy = false;
+async function extract() {
+  const text = textEl.value.trim();
+  if (busy || !text || textEl.value.length > MAX) return;
+  const tone = form.elements.tone.value;
+
+  busy = true;
+  submitBtn.disabled = true;
+  submitBtn.replaceChildren(el("span", { class: "spinner" }), "Extracting…");
+  renderLoading();
+  // On narrow screens results sit below the form — bring them into view.
+  if (matchMedia("(max-width: 860px)").matches) results.scrollIntoView({ behavior: "smooth", block: "start" });
+  const t0 = performance.now();
+
+  try {
+    const r = await fetch("/api/extract", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text, tone }),
+    });
+    const body = await r.json().catch(() => ({}));
+    if (!r.ok) {
+      const detail = Array.isArray(body.detail)
+        ? body.detail.map((d) => d.msg).join("; ")
+        : body.detail || `HTTP ${r.status}`;
+      const title = { 422: "Invalid input", 502: "The AI model returned an error", 503: "Backend not configured" }[r.status] || "Request failed";
+      renderError(title, detail);
+    } else {
+      renderResult(body, performance.now() - t0);
+    }
+  } catch (err) {
+    renderError("Can't reach the backend", "Is the server running? Start it with: uvicorn main:app --reload");
+  } finally {
+    busy = false;
+    submitBtn.replaceChildren("Extract Action Items");
+    updateCount();
+  }
+}
+
+form.addEventListener("submit", (e) => { e.preventDefault(); extract(); });
+textEl.addEventListener("input", updateCount);
+textEl.addEventListener("keydown", (e) => {
+  if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) { e.preventDefault(); extract(); }
+});
+
+updateCount();
+checkHealth();
+loadSamples();
+</script>
+</body>
+</html>

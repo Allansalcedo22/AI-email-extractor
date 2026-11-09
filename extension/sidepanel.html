@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Action Item Extractor</title>
+<link rel="stylesheet" href="sidepanel.css">
+</head>
+<body>
+<header>
+  <div class="brand">
+    <img src="icons/icon32.png" width="24" height="24" alt="">
+    <h1>Action Items</h1>
+  </div>
+  <div class="header-right">
+    <span class="status" id="status" title="Checking backend…"><span class="dot" id="statusDot"></span><span id="statusText">…</span></span>
+    <button class="icon-btn" id="settingsBtn" type="button" aria-label="Settings" aria-expanded="false" aria-controls="settings">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+    </button>
+  </div>
+</header>
+
+<form class="card settings" id="settings" hidden>
+  <label class="label" for="backendUrl">Backend URL</label>
+  <div class="settings-row">
+    <input id="backendUrl" type="url" placeholder="http://localhost:8000" required spellcheck="false">
+    <button class="btn small" type="submit">Save</button>
+  </div>
+  <p class="note" id="settingsNote">Where your FastAPI server is running.</p>
+
+  <span class="label" style="margin-top:8px">Theme</span>
+  <fieldset class="seg" aria-label="Theme">
+    <legend class="sr-only">Theme</legend>
+    <label><input type="radio" name="theme" value="light" checked><span>Light</span></label>
+    <label><input type="radio" name="theme" value="dark"><span>Dark</span></label>
+    <label><input type="radio" name="theme" value="auto"><span>Match system</span></label>
+  </fieldset>
+</form>
+
+<main>
+  <div class="card offline" id="offline" role="status" hidden>
+    <strong>Backend isn't running</strong>
+    <p>Start it in a terminal, then this panel reconnects on its own:</p>
+    <code>cd backend &amp;&amp; .venv/bin/uvicorn main:app --reload --port 8000</code>
+    <p class="note" id="offlineUrl"></p>
+  </div>
+
+  <section class="card input-card">
+    <button class="btn outline" id="readBtn" type="button">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h4"/></svg>
+      <span>Read Current Page / Selection</span>
+    </button>
+    <div class="source" id="source" hidden></div>
+
+    <div class="divider"><span>or paste text</span></div>
+
+    <textarea id="text" placeholder="Paste an email or message thread…" spellcheck="false"></textarea>
+    <div class="row">
+      <fieldset class="seg" aria-label="Reply tone">
+        <legend class="sr-only">Reply tone</legend>
+        <label><input type="radio" name="tone" value="Professional" checked><span>Professional</span></label>
+        <label><input type="radio" name="tone" value="Casual"><span>Casual</span></label>
+        <label><input type="radio" name="tone" value="Direct"><span>Direct</span></label>
+      </fieldset>
+      <button class="link" id="clearBtn" type="button">Clear</button>
+    </div>
+    <div class="row">
+      <span class="count" id="count">0 / 30,000</span>
+      <span class="hint"><kbd id="mod">Ctrl</kbd>+<kbd>Enter</kbd></span>
+    </div>
+    <button class="btn" id="submit" type="button">Extract Action Items</button>
+  </section>
+
+  <section class="results" id="results" aria-live="polite"></section>
+</main>
+
+<script src="sidepanel.js"></script>
+</body>
+</html>
